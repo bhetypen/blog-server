@@ -15,5 +15,18 @@ services:
       timeout: 5s
       retries: 3
 
+    # === NEW NETWORK CONFIGURATION ===
+    networks:
+      blog_network:
+        ipv4_address: 172.30.0.2 # Assigned static IP from the subnet
+        aliases:
+          - blog-service # Assigned Name for Caddy
+
+
 volumes:
   uploads:
+
+# === NEW NETWORK DEFINITION ===
+networks:
+  blog_network:
+    external: true # Tells Docker Compose this network already exists
