@@ -38,7 +38,7 @@ app.get("/health", (req, res) => {
     const states = ["disconnected", "connected", "connecting", "disconnecting"];
 
     res.status(200).json({
-        status: "ok",
+        status: "this is the blog-post api",
         uptime: process.uptime(),
         timestamp: new Date(),
         database: states[dbState],
