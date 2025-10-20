@@ -4,8 +4,6 @@ services:
     container_name: blog-backend
     env_file:
       - /root/blog-server.env
-    ports:
-      - "4000"   #internal port only
     volumes:
       - uploads:/app/uploads
     restart: unless-stopped
