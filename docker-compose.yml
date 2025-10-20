@@ -5,7 +5,7 @@ services:
     env_file:
       - /root/blog-server.env
     ports:
-      - "3000:4000"   # map VPS port 3000 → container port 4000
+      - "4000"   #internal port only
     volumes:
       - uploads:/app/uploads
     restart: unless-stopped
