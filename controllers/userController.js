@@ -58,9 +58,9 @@ async function retrieveDetails(req, res) {
     try {
         let userDoc;
         if (req.user?.id) {
-            userDoc = await User.findById(req.user.id).select("_id email username");
+            userDoc = await User.findById(req.user.id).select("_id email username isAdmin");
         } else if (req.user?.email) {
-            userDoc = await User.findOne({ email: req.user.email }).select("_id email username");
+            userDoc = await User.findOne({ email: req.user.email }).select("_id email username isAdmin");
         } else {
             return res.status(404).send({ error: "User not found" });
         }
@@ -68,7 +68,7 @@ async function retrieveDetails(req, res) {
         if (!userDoc) return res.status(404).send({ error: "User not found" });
 
         return res.send({
-            user: { id: userDoc._id, email: userDoc.email, username: userDoc.username },
+            user: { id: userDoc._id, email: userDoc.email, username: userDoc.username, isAdmin: userDoc.isAdmin },
         });
     } catch (e) {
         console.error("retrieveDetails error:", e);
