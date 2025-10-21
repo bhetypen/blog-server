@@ -2,12 +2,14 @@
 const Post = require("../models/Post");
 const { errorHandler } = require("../auth");
 
-// Helper: populate usernames/emails on comment & reply user refs
+// ✅ Helper: populate usernames/emails on comment & reply user refs (no chaining)
 async function populateAllUsers(doc) {
-    // When called with a Mongoose document, .populate() returns the same doc
-    return doc
-        .populate("comments.user", "username email")
-        .populate("comments.replies.user", "username email");
+    if (!doc) return doc;
+    await doc.populate([
+        { path: "comments.user", select: "username email" },
+        { path: "comments.replies.user", select: "username email" },
+    ]);
+    return doc;
 }
 
 // Add comment (any user; admins forbidden)
@@ -20,14 +22,13 @@ async function addComment(req, res) {
         const { text } = req.body || {};
         if (!text || !String(text).trim()) return res.status(400).json({ error: "Comment text is required" });
 
-        let post = await Post.findById(postId);
+        const post = await Post.findById(postId); // document (NOT lean)
         if (!post) return res.status(404).json({ error: "Post not found" });
 
         post.comments.push({ user: req.user.id, text: String(text).trim() });
         await post.save();
 
-        // Populate so the returned comment includes user.username
-        post = await populateAllUsers(post);
+        await populateAllUsers(post); // ✅ populate after save on the same doc
         const added = post.comments[post.comments.length - 1];
 
         return res.status(201).json({
@@ -56,7 +57,7 @@ async function updateComment(req, res) {
         const { text } = req.body || {};
         if (!text || !String(text).trim()) return res.status(400).json({ error: "Comment text is required" });
 
-        let post = await Post.findById(postId);
+        const post = await Post.findById(postId);
         if (!post) return res.status(404).json({ error: "Post not found" });
 
         const comment = post.comments.id(commentId);
@@ -68,15 +69,14 @@ async function updateComment(req, res) {
         comment.text = String(text).trim();
         await post.save();
 
-        // Populate and return the updated comment with user details
-        post = await populateAllUsers(post);
+        await populateAllUsers(post); // ✅
         const updated = post.comments.id(commentId);
 
         return res.json({
             message: "Comment updated",
             comment: {
                 id: updated._id,
-                user: updated.user, // { _id, username, email }
+                user: updated.user, // populated
                 text: updated.text,
                 createdAt: updated.createdAt,
                 updatedAt: updated.updatedAt,
@@ -105,7 +105,7 @@ async function deleteComment(req, res) {
         const isAdmin = !!req.user.isAdmin;
         if (!isOwner && !isAdmin) return res.status(403).json({ error: "Forbidden" });
 
-        comment.deleteOne(); // remove embedded subdoc
+        comment.deleteOne();
         await post.save();
 
         return res.json({ message: "Comment deleted" });
@@ -124,10 +124,9 @@ async function replyToComment(req, res) {
         const { text } = req.body || {};
         if (!text || !String(text).trim()) return res.status(400).json({ error: "Reply text is required" });
 
-        let post = await Post.findById(postId);
+        const post = await Post.findById(postId);
         if (!post) return res.status(404).json({ error: "Post not found" });
 
-        // Only the post author can reply
         if (String(post.author) !== req.user.id) {
             return res.status(403).json({ error: "Only the post author can reply to comments" });
         }
@@ -138,8 +137,7 @@ async function replyToComment(req, res) {
         comment.replies.push({ user: req.user.id, text: String(text).trim() });
         await post.save();
 
-        // Populate and return the added reply (with user details)
-        post = await populateAllUsers(post);
+        await populateAllUsers(post); // ✅
         const savedComment = post.comments.id(commentId);
         const reply = savedComment.replies[savedComment.replies.length - 1];
 
@@ -147,7 +145,7 @@ async function replyToComment(req, res) {
             message: "Reply added",
             reply: {
                 id: reply._id,
-                user: reply.user, // { _id, username, email }
+                user: reply.user, // populated
                 text: reply.text,
                 createdAt: reply.createdAt,
                 updatedAt: reply.updatedAt,
@@ -168,10 +166,9 @@ async function updateReply(req, res) {
         const { text } = req.body || {};
         if (!text || !String(text).trim()) return res.status(400).json({ error: "Reply text is required" });
 
-        let post = await Post.findById(postId);
+        const post = await Post.findById(postId);
         if (!post) return res.status(404).json({ error: "Post not found" });
 
-        // Only post author can edit replies (their own)
         if (String(post.author) !== req.user.id) {
             return res.status(403).json({ error: "Only the post author can edit replies" });
         }
@@ -189,15 +186,14 @@ async function updateReply(req, res) {
         reply.text = String(text).trim();
         await post.save();
 
-        // Populate and return the updated reply (with user details)
-        post = await populateAllUsers(post);
+        await populateAllUsers(post); // ✅
         const updatedReply = post.comments.id(commentId).replies.id(replyId);
 
         return res.json({
             message: "Reply updated",
             reply: {
                 id: updatedReply._id,
-                user: updatedReply.user, // { _id, username, email }
+                user: updatedReply.user, // populated
                 text: updatedReply.text,
                 createdAt: updatedReply.createdAt,
                 updatedAt: updatedReply.updatedAt,
@@ -225,7 +221,7 @@ async function deleteReply(req, res) {
         const reply = comment.replies.id(replyId);
         if (!reply) return res.status(404).json({ error: "Reply not found" });
 
-        const isOwner = String(reply.user) === req.user.id; // post author who wrote it
+        const isOwner = String(reply.user) === req.user.id;
         const isAdmin = !!req.user.isAdmin;
         if (!isOwner && !isAdmin) return res.status(403).json({ error: "Forbidden" });
 
