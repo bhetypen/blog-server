@@ -8,7 +8,7 @@ const app = express();
 dotenv.config();
 
 const corsOptions = {
-    origin: ['http://localhost:3000', 'http://localhost:4000'],
+    origin: ['http://localhost:3000', 'http://localhost:4000', 'http://localhost:5173','http://localhost:5174', 'http://localhost:5175' ],
 };
 
 app.use(express.json());
