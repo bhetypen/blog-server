@@ -99,6 +99,34 @@ async function getPostById(req, res) {
     }
 }
 
+// Get posts of logged-in user
+async function getMyPosts(req, res) {
+    try {
+        if (!req.user?.id) return res.status(401).json({ error: "Unauthorized" });
+
+        const posts = await Post.find({ author: req.user.id })
+            .sort({ createdAt: -1 })
+            .populate("author", "username email")
+            .lean();
+
+        return res.json({
+            posts: posts.map((p) => ({
+                id: p._id,
+                title: p.title,
+                content: p.content,
+                author: p.author ? { id: p.author._id, username: p.author.username, email: p.author.email } : null,
+                commentsCount: Array.isArray(p.comments) ? p.comments.length : 0,
+                createdAt: p.createdAt,
+                updatedAt: p.updatedAt,
+            })),
+        });
+    } catch (err) {
+        console.error("getMyPosts error:", err);
+        return errorHandler(err, req, res);
+    }
+}
+
+
 // Update post (owner only — admins cannot update)
 async function updatePost(req, res) {
     try {
@@ -153,4 +181,4 @@ async function deletePost(req, res) {
     }
 }
 
-module.exports = { createPost, getAllPosts, getPostById, updatePost, deletePost };
+module.exports = { createPost, getAllPosts, getPostById, updatePost, deletePost, getMyPosts };
