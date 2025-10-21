@@ -7,29 +7,19 @@ const app = express();
 
 dotenv.config();
 
-const allowedOrigins = [
-    'http://localhost:3000',
-    'http://localhost:4000',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost:5174',
-    'http://localhost:5175',
-    'https://api.bhetycodes.com'
-];
-
-const corsOptions = {
-    origin(origin, cb) {
-        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-        return cb(new Error('Not allowed by CORS'));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-};
-
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
-app.use('*', cors(corsOptions));
+
+//Allow specific origins
+const corsOptions = {
+    origin: ['http://localhost:3000', 'http://localhost:4000', 'http://localhost:5174', 'http://localhost:5173', 'http://localhost:5174','http://localhost:5175'],
+    credentials: true,
+    optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
+
+
+app.use(cors(corsOptions));
 
 //MongoDB database
 mongoose.connect(process.env.MONGODB_URI, {
