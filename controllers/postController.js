@@ -3,17 +3,21 @@ const Post = require("../models/Post");
 const { errorHandler } = require("../auth");
 
 // Create post (auth: user)
+// Create post (auth: user)
 async function createPost(req, res) {
     try {
         const { title, content } = req.body || {};
         if (!title || !content) return res.status(400).json({ error: "Title and content are required" });
         if (!req.user?.id) return res.status(401).json({ error: "Unauthorized" });
 
-        const post = await Post.create({
+        let post = await Post.create({
             title: String(title).trim(),
             content: String(content).trim(),
             author: req.user.id,
         });
+
+        //populate author
+        post = await post.populate("author", "username email");
 
         return res.status(201).json({
             message: "Post created",
@@ -21,7 +25,8 @@ async function createPost(req, res) {
                 id: post._id,
                 title: post.title,
                 content: post.content,
-                author: req.user.id,
+                author: post.author ? { id: post.author._id, username: post.author.username, email: post.author.email } : null,
+                commentsCount: 0,
                 createdAt: post.createdAt,
                 updatedAt: post.updatedAt,
             },
@@ -31,6 +36,7 @@ async function createPost(req, res) {
         return errorHandler(err, req, res);
     }
 }
+
 
 // Get all posts (public) with author username
 async function getAllPosts(req, res) {
@@ -128,12 +134,13 @@ async function getMyPosts(req, res) {
 
 
 // Update post (owner only — admins cannot update)
+// Update post (owner only — admins cannot update)
 async function updatePost(req, res) {
     try {
         const { id } = req.params;
         const { title, content } = req.body || {};
 
-        const post = await Post.findById(id);
+        let post = await Post.findById(id);
         if (!post) return res.status(404).json({ error: "Post not found" });
 
         // Only the post owner can update (no admin override)
@@ -144,13 +151,16 @@ async function updatePost(req, res) {
         if (content) post.content = String(content).trim();
         await post.save();
 
+        // 🔧 populate author so response shape matches list/detail endpoints
+        post = await post.populate("author", "username email");
+
         return res.json({
             message: "Post updated",
             post: {
                 id: post._id,
                 title: post.title,
                 content: post.content,
-                author: post.author,
+                author: post.author ? { id: post.author._id, username: post.author.username, email: post.author.email } : null,
                 createdAt: post.createdAt,
                 updatedAt: post.updatedAt,
             },

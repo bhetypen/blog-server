@@ -19,8 +19,6 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 
-app.use(cors(corsOptions));
-
 //MongoDB database
 mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
